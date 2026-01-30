@@ -527,29 +527,24 @@ class LaplaceWallThickness:
         writer.SetInputData(self.endo_poly)
         writer.Write()
 
-    def execute(self, output_file, csv_filename=None):
+    def execute(self, vtk_filename, csv_filename):
         """
         Execute the Laplace thickness calculation pipeline.
         
         Args:
-            output_file: Path to output VTK file
-            csv_filename: Path to output CSV file (optional, auto-generated if None)
+            vtk_filename: Path to output VTK file
+            csv_filename: Path to output CSV file
         
         Returns:
             bool: True if execution successful, False otherwise
         """
-        if csv_filename is None:
-            import os
-            base_name = os.path.splitext(output_file)[0]
-            csv_filename = f"{base_name}.csv"
-        
         # Execute algorithm
         count = self.voxelize_domain()
         
         if count > 0:
             self.solve_laplace()
             self.calculate_thickness()
-            self.save_output(output_file)
+            self.save_output(vtk_filename)
             self.analyze_regions(csv_filename)
             return True
         else:

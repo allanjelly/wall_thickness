@@ -90,7 +90,7 @@ def load_and_verify_meshes(input_path):
 def main():
     parser = argparse.ArgumentParser(description="Calculate cardiac wall thickness using various algorithms.")
     parser.add_argument("input_file", nargs='?', default="endocardium_regions.vtk", help="Path to input VTK file containing both Endo and Epi meshes")
-    parser.add_argument("--out", default="endocardium_laplace.vtk", help="Output VTK file")
+    parser.add_argument("--out", default="results", help="Base name for output files (CSV and VTK will be named as {out}_{algorithm}.{ext})")
     parser.add_argument("--res", type=float, default=1.0, help="Voxel resolution in mm")
     parser.add_argument("--algorithm", default="laplace", help="Algorithm to use (currently: laplace)")
     
@@ -104,13 +104,17 @@ def main():
     # Load and verify input meshes
     endo_poly, epi_poly = load_and_verify_meshes(args.input_file)
     
+    # Generate output filenames based on base name and algorithm
+    csv_filename = f"{args.out}_{args.algorithm}.csv"
+    vtk_filename = f"{args.out}_{args.algorithm}.vtk"
+    
     # Calculate grid bounds
     grid_bounds = LaplaceWallThickness.calculate_grid_bounds(endo_poly, epi_poly)
     
     # Instantiate and execute algorithm
     if args.algorithm.lower() == "laplace":
         calc = LaplaceWallThickness(endo_poly, epi_poly, grid_bounds, args.res)
-        success = calc.execute(args.out)
+        success = calc.execute(vtk_filename, csv_filename)
         if not success:
             sys.exit(1)
     else:
