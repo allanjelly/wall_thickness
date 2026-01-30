@@ -6,6 +6,8 @@ import numpy as np
 from vtk.util.numpy_support import vtk_to_numpy, numpy_to_vtk
 
 from LaplaceThickness import LaplaceWallThickness
+from SimpleThickness import SimpleWallThickness
+from RayThickness import RayWallThickness
 
 
 def read_vtk(filename):
@@ -92,7 +94,7 @@ def main():
     parser.add_argument("input_file", nargs='?', default="endocardium_regions.vtk", help="Path to input VTK file containing both Endo and Epi meshes")
     parser.add_argument("--out", default="results", help="Base name for output files (CSV and VTK will be named as {out}_{algorithm}.{ext})")
     parser.add_argument("--res", type=float, default=1.0, help="Voxel resolution in mm")
-    parser.add_argument("--algorithm", default="laplace", help="Algorithm to use (currently: laplace)")
+    parser.add_argument("--algorithm", default="laplace", help="Algorithm to use (laplace, simple, ray)")
     
     args = parser.parse_args()
     
@@ -108,17 +110,24 @@ def main():
     csv_filename = f"{args.out}_{args.algorithm}.csv"
     vtk_filename = f"{args.out}_{args.algorithm}.vtk"
     
-    # Calculate grid bounds
-    grid_bounds = LaplaceWallThickness.calculate_grid_bounds(endo_poly, epi_poly)
-    
-    # Instantiate and execute algorithm
+    # Calculate grid bounds (shared helper)
     if args.algorithm.lower() == "laplace":
+        grid_bounds = LaplaceWallThickness.calculate_grid_bounds(endo_poly, epi_poly)
         calc = LaplaceWallThickness(endo_poly, epi_poly, grid_bounds, args.res)
         success = calc.execute(vtk_filename, csv_filename)
-        if not success:
-            sys.exit(1)
+    elif args.algorithm.lower() == "simple":
+        grid_bounds = SimpleWallThickness.calculate_grid_bounds(endo_poly, epi_poly)
+        calc = SimpleWallThickness(endo_poly, epi_poly, grid_bounds, args.res)
+        success = calc.execute(vtk_filename, csv_filename)
+    elif args.algorithm.lower() == "ray":
+        grid_bounds = RayWallThickness.calculate_grid_bounds(endo_poly, epi_poly)
+        calc = RayWallThickness(endo_poly, epi_poly, grid_bounds, args.res)
+        success = calc.execute(vtk_filename, csv_filename)
     else:
         print(f"Error: Unknown algorithm: {args.algorithm}")
+        sys.exit(1)
+
+    if not success:
         sys.exit(1)
 
 
