@@ -8,18 +8,6 @@ from vtk.util.numpy_support import vtk_to_numpy, numpy_to_vtk
 class RayWallThickness:
     """Ray casting wall thickness plugin."""
     
-    @staticmethod
-    def calculate_grid_bounds(endo_poly, epi_poly):
-        """Calculate combined bounds for both meshes with padding."""
-        b1 = endo_poly.GetBounds()
-        b2 = epi_poly.GetBounds()
-        
-        return [
-            min(b1[0], b2[0]) - 1.0, max(b1[1], b2[1]) + 1.0,
-            min(b1[2], b2[2]) - 1.0, max(b1[3], b2[3]) + 1.0,
-            min(b1[4], b2[4]) - 1.0, max(b1[5], b2[5]) + 1.0
-        ]
-    
     def __init__(
         self,
         endo_poly,

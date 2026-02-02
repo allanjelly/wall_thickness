@@ -102,7 +102,6 @@ def main():
     if not os.path.exists(args.input_file):
         print(f"Error: Input file not found: {args.input_file}")
         sys.exit(1)
-
     # Load and verify input meshes
     endo_poly, epi_poly = load_and_verify_meshes(args.input_file)
     
@@ -110,18 +109,18 @@ def main():
     csv_filename = f"{args.out}_{args.algorithm}.csv"
     vtk_filename = f"{args.out}_{args.algorithm}.vtk"
     
-    # Calculate grid bounds (shared helper)
+    # Execute selected algorithm
     if args.algorithm.lower() == "laplace":
         grid_bounds = LaplaceWallThickness.calculate_grid_bounds(endo_poly, epi_poly)
         calc = LaplaceWallThickness(endo_poly, epi_poly, grid_bounds, args.res)
         success = calc.execute(vtk_filename, csv_filename)
     elif args.algorithm.lower() == "simple":
-        grid_bounds = SimpleWallThickness.calculate_grid_bounds(endo_poly, epi_poly)
-        calc = SimpleWallThickness(endo_poly, epi_poly, grid_bounds, args.res)
+        # Note: SimpleThickness does not use grid_bounds or resolution parameters
+        calc = SimpleWallThickness(endo_poly, epi_poly)
         success = calc.execute(vtk_filename, csv_filename)
     elif args.algorithm.lower() == "ray":
-        grid_bounds = RayWallThickness.calculate_grid_bounds(endo_poly, epi_poly)
-        calc = RayWallThickness(endo_poly, epi_poly, grid_bounds, args.res)
+        # Note: RayThickness does not use grid_bounds or resolution parameters
+        calc = RayWallThickness(endo_poly, epi_poly)
         success = calc.execute(vtk_filename, csv_filename)
     else:
         print(f"Error: Unknown algorithm: {args.algorithm}")
