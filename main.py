@@ -20,7 +20,10 @@ def read_vtk(filename):
 
 def load_and_verify_meshes(input_path):
     """
-    Load input file and separate Endo and Epi meshes.
+    Load input file and separate Endo and Epi meshes based on 'Regions' scalar.
+    
+    Endo mesh: polygons with region != 0
+    Epi mesh: polygons with region == 0 or not assigned
     
     Returns:
         tuple: (endo_poly, epi_poly)
@@ -28,72 +31,114 @@ def load_and_verify_meshes(input_path):
     print(f"Loading input file: {input_path}")
     combined_poly = read_vtk(input_path)
     
-    print("Separating Endo and Epi meshes...")
-    conn = vtk.vtkPolyDataConnectivityFilter()
-    conn.SetInputData(combined_poly)
-    conn.SetExtractionModeToAllRegions()
-    conn.Update()
+    print("Separating Endo and Epi meshes based on 'Regions' scalar...")
     
-    n_regions = conn.GetNumberOfExtractedRegions()
-    print(f"Found {n_regions} disconnected components.")
+    # Get the Regions array from point data
+    regions_array = combined_poly.GetPointData().GetArray("Regions")
     
-    candidates = []
-    conn.SetExtractionModeToSpecifiedRegions()
+    if regions_array is None:
+        raise ValueError("'Regions' array not found in point data. Cannot separate meshes.")
     
-    for i in range(n_regions):
-        conn.InitializeSpecifiedRegionList()
-        conn.AddSpecifiedRegion(i)
-        conn.Update()
+    # Convert to numpy for easier manipulation
+    regions = vtk_to_numpy(regions_array)
+    
+    # For each cell, determine if it belongs to endo or epi
+    # A cell is endo if ANY of its points has region != 0
+    # A cell is epi if ALL of its points have region == 0
+    n_cells = combined_poly.GetNumberOfCells()
+    endo_mask = np.zeros(n_cells, dtype=bool)
+    
+    for i in range(n_cells):
+        cell = combined_poly.GetCell(i)
+        point_ids = cell.GetPointIds()
         
-        # Isolate points using CleanPolyData to ensure we have compact point IDs and data
-        cleaner = vtk.vtkCleanPolyData()
-        cleaner.SetInputConnection(conn.GetOutputPort())
-        cleaner.Update()
+        # Check if any point in this cell has region != 0
+        has_nonzero_region = False
+        for j in range(point_ids.GetNumberOfIds()):
+            point_id = point_ids.GetId(j)
+            if regions[point_id] != 0:
+                has_nonzero_region = True
+                break
         
-        # DeepCopy to ensure independence from pipeline
-        poly = vtk.vtkPolyData()
-        poly.DeepCopy(cleaner.GetOutput())
-        
-        # Skip tiny noise
-        if poly.GetNumberOfCells() < 100:
-            continue
-
-        # Check Mean Region value (Endo > 0, Epi ~ 0)
-        arr = poly.GetPointData().GetArray("Regions")
-        if arr:
-            mean_val = np.mean(vtk_to_numpy(arr))
-        else:
-            mean_val = 0.0
-        
-        candidates.append({'poly': poly, 'mean': mean_val, 'cells': poly.GetNumberOfCells()})
-
-    if len(candidates) < 2:
-         raise ValueError(f"Expected at least 2 components (Endo, Epi), found {len(candidates)}.")
-         
-    # Sort by mean: Highest is Endo (Mean > 0), Lowest is Epi (Mean ~ 0)
-    candidates.sort(key=lambda x: x['mean'], reverse=True)
+        endo_mask[i] = has_nonzero_region
     
-    endo_poly = candidates[0]['poly']
-    epi_poly = candidates[-1]['poly']
+    epi_mask = ~endo_mask
     
-    endo_mean = candidates[0]['mean']
-    epi_mean = candidates[-1]['mean']
+    endo_cell_count = np.sum(endo_mask)
+    epi_cell_count = np.sum(epi_mask)
     
-    print(f"Selected Endo: {endo_poly.GetNumberOfCells()} cells, Mean Regions: {endo_mean:.2f}")
-    print(f"Selected Epi:  {epi_poly.GetNumberOfCells()} cells, Mean Regions: {epi_mean:.2f}")
+    print(f"Found {endo_cell_count} endo cells (region != 0)")
+    print(f"Found {epi_cell_count} epi cells (region == 0)")
     
-    # Verify Endo has Regions array
-    if not endo_poly.GetPointData().GetArray("Regions"):
-        print("WARNING: 'Regions' array missing from selected Endocardium mesh!")
-
+    if endo_cell_count == 0:
+        raise ValueError("No endo cells found (region != 0)")
+    if epi_cell_count == 0:
+        raise ValueError("No epi cells found (region == 0)")
+    
+    # Extract endo mesh
+    endo_poly = extract_cells_by_mask(combined_poly, endo_mask)
+    
+    # Extract epi mesh
+    epi_poly = extract_cells_by_mask(combined_poly, epi_mask)
+    
+    print(f"Endo mesh: {endo_poly.GetNumberOfPoints()} points, {endo_poly.GetNumberOfCells()} cells")
+    print(f"Epi mesh:  {epi_poly.GetNumberOfPoints()} points, {epi_poly.GetNumberOfCells()} cells")
+    
     return endo_poly, epi_poly
+
+
+def extract_cells_by_mask(polydata, mask):
+    """
+    Extract cells from polydata based on a boolean mask.
+    
+    Args:
+        polydata: Input vtkPolyData
+        mask: Boolean numpy array indicating which cells to keep
+    
+    Returns:
+        vtkPolyData with selected cells
+    """
+    # Create a selection array
+    selection_array = numpy_to_vtk(mask.astype(np.uint8))
+    selection_array.SetName("Selection")
+    
+    # Add to cell data temporarily
+    polydata.GetCellData().AddArray(selection_array)
+    
+    # Use threshold filter to extract cells where Selection == 1
+    threshold = vtk.vtkThreshold()
+    threshold.SetInputData(polydata)
+    threshold.SetInputArrayToProcess(0, 0, 0, vtk.vtkDataObject.FIELD_ASSOCIATION_CELLS, "Selection")
+    threshold.SetLowerThreshold(1)
+    threshold.SetUpperThreshold(1)
+    threshold.Update()
+    
+    # Convert back to polydata
+    geometry_filter = vtk.vtkGeometryFilter()
+    geometry_filter.SetInputConnection(threshold.GetOutputPort())
+    geometry_filter.Update()
+    
+    # Clean up and compact point IDs
+    cleaner = vtk.vtkCleanPolyData()
+    cleaner.SetInputConnection(geometry_filter.GetOutputPort())
+    cleaner.Update()
+    
+    # Create output polydata
+    output_poly = vtk.vtkPolyData()
+    output_poly.DeepCopy(cleaner.GetOutput())
+    
+    # Remove the temporary selection array
+    output_poly.GetCellData().RemoveArray("Selection")
+    polydata.GetCellData().RemoveArray("Selection")
+    
+    return output_poly
 
 
 def main():
     parser = argparse.ArgumentParser(description="Calculate cardiac wall thickness using various algorithms.")
     parser.add_argument("input_file", nargs='?', default="endocardium_regions.vtk", help="Path to input VTK file containing both Endo and Epi meshes")
     parser.add_argument("--out", default="results", help="Base name for output files (CSV and VTK will be named as {out}_{algorithm}.{ext})")
-    parser.add_argument("--res", type=float, default=1.0, help="Voxel resolution in mm")
+    parser.add_argument("--res", type=float, default=0.3, help="Voxel resolution in mm")
     parser.add_argument("--algorithm", default="laplace", help="Algorithm to use (laplace, simple, ray)")
     
     args = parser.parse_args()

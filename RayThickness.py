@@ -165,6 +165,9 @@ class RayWallThickness:
             print(f"  → Using OUTWARD direction (normals as-is)")
         
         
+        # Initialize per-point thickness array
+        self.thickness_per_point = np.full(len(interior_points), 0.0)
+        
         # Dictionary for measurements
         thickness_by_region = {}
         discard_reasons = {}
@@ -227,6 +230,7 @@ class RayWallThickness:
                 discard_reasons[region_id]['too_far'] += 1
             else:
                 thickness_by_region[region_id].append(distance)
+                self.thickness_per_point[i] = distance  # Store per-point thickness
             
             processed += 1
             if progress_interval > 0 and processed % progress_interval == 0:
@@ -270,7 +274,6 @@ class RayWallThickness:
         # Store results
         self.thickness_by_region = thickness_by_region
         self.discard_reasons = discard_reasons
-        self.thickness_per_point = np.full(len(interior_points), -1.0)
         
         # Format results
         region_names = [
@@ -374,6 +377,7 @@ class RayWallThickness:
             arr.SetName("RayThickness")
             pd = self.endo_poly.GetPointData()
             pd.AddArray(arr)
+            pd.SetActiveScalars("RayThickness")            
     
     def save_output(self, output_path):
         """Save modified endocardium mesh to VTK file."""
