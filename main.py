@@ -8,6 +8,8 @@ from vtk.util.numpy_support import vtk_to_numpy, numpy_to_vtk
 from LaplaceThickness import LaplaceWallThickness
 from SimpleThickness import SimpleWallThickness
 from RayThickness import RayWallThickness
+from FastLaplaceThickness import FastLaplaceWallThickness
+from SuperFastLaplaceThickness import SuperFastLaplaceWallThickness
 
 
 def read_vtk(filename):
@@ -139,7 +141,8 @@ def main():
     parser.add_argument("input_file", nargs='?', default="endocardium_regions.vtk", help="Path to input VTK file containing both Endo and Epi meshes")
     parser.add_argument("--out", default="results", help="Base name for output files (CSV and VTK will be named as {out}_{algorithm}.{ext})")
     parser.add_argument("--res", type=float, default=0.3, help="Voxel resolution in mm")
-    parser.add_argument("--algorithm", default="laplace", help="Algorithm to use (laplace, simple, ray)")
+    parser.add_argument("--algorithm", default="fastlaplace", help="Algorithm to use (laplace, fastlaplace, superfastlaplace, simple, ray)")
+    parser.add_argument("--workers", type=int, default=None, help="Number of parallel workers for superfastlaplace (default: CPU count)")
     
     args = parser.parse_args()
     
@@ -159,6 +162,14 @@ def main():
         grid_bounds = LaplaceWallThickness.calculate_grid_bounds(endo_poly, epi_poly)
         calc = LaplaceWallThickness(endo_poly, epi_poly, grid_bounds, args.res)
         success = calc.execute(vtk_filename, csv_filename)
+    elif args.algorithm.lower() == "fastlaplace":
+        grid_bounds = FastLaplaceWallThickness.calculate_grid_bounds(endo_poly, epi_poly)
+        calc = FastLaplaceWallThickness(endo_poly, epi_poly, grid_bounds, args.res)
+        success = calc.execute(vtk_filename, csv_filename)     
+    elif args.algorithm.lower() == "superfastlaplace":
+        grid_bounds = SuperFastLaplaceWallThickness.calculate_grid_bounds(endo_poly, epi_poly)
+        calc = SuperFastLaplaceWallThickness(endo_poly, epi_poly, grid_bounds, args.res)
+        success = calc.execute(vtk_filename, csv_filename)             
     elif args.algorithm.lower() == "simple":
         # Note: SimpleThickness does not use grid_bounds or resolution parameters
         calc = SimpleWallThickness(endo_poly, epi_poly)
