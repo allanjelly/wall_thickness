@@ -1,4 +1,4 @@
-# Atrial wall thickness
+## Atrial wall thickness
 These are scripts used to calculate the heart's atrial thickness using different algorithms.
 
 ![alt text](https://github.com/allanjelly/wall_thickness/blob/main/LA1.jpg?raw=true)
