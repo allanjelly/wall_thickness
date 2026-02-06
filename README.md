@@ -39,7 +39,5 @@ Output:
 Add.info:
   - batch.py - does what's on a tin. Finds .vtk files and processes them as a batch.
 
-Contributing.
-
 
     
