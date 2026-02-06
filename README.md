@@ -1,13 +1,21 @@
 # Atrial wall thickness
-This is a couple of Python scripts that are used for calculating the heart's atrium thickness using different algorithms.
+These are scripts used to calculate the heart's atrial thickness using different algorithms.
+
+![alt text](https://github.com/allanjelly/wall_thickness/blob/main/LA1.jpg?raw=true)
+
+Motivation
+Written to help my lovely sis in her work on the papers for King's College of London.
+
+Quick Start
+Just download the required scripts. Working Python ver 3.12 is a prerequisite
 Keep in mind that the required resolution of the output files impacts the script's performance very heavily.
 At 0.5mm resolution example atrium voxelization creates 4.8mln voxels.
-At 0.25mm number of voxels rises to 38mln
-At 0.1mm it becomes 590mln
+At 0.25mm number of voxels rises to 38 million
+At 0.1mm, it becomes 590mln
 Memory and CPU requirements escalate very quickly
 
-The input for the scripts is *.vtk file consisting both endocardium and epicardium meshes.
-Epicardium vertexes should also be assigned to atrium segments (pvs, walls etc.) to allow the calculation of segmented results.
+The input for the scripts is a *.vtk file consisting of both endocardium and epicardium meshes.
+Epicardium vertices should also be assigned to atrium segments (pvs, walls etc.) to allow the calculation of segmented results.
 
 Usage: 
     python main.py input_file [--out Outfile] [--res Resolution] [--algorithm] 
@@ -30,6 +38,8 @@ Output:
     - .vtk format (Calculated thickness on a per/point basis) - ready for visualization
 Add.info:
   - batch.py - does what's on a tin. Finds .vtk files and processes them as a batch.
+
+Contributing.
 
 
     
