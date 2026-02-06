@@ -3,7 +3,6 @@ These are scripts used to calculate the heart's atrial thickness using different
 
 ![alt text](https://github.com/allanjelly/wall_thickness/blob/main/LA1.jpg?raw=true)
 
-Motivation
 Written to help my lovely sis in her work on the papers for King's College of London.
 
 Quick Start
