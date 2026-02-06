@@ -5,7 +5,7 @@ These are scripts used to calculate the heart's atrial thickness using different
 
 Written to help my lovely sis in her work on the papers for King's College of London.
 
-Quick Start
+### Quick Start
 Just download the required scripts. Working Python ver 3.12 is a prerequisite
 Keep in mind that the required resolution of the output files impacts the script's performance very heavily.
 At 0.5mm resolution example atrium voxelization creates 4.8mln voxels.
@@ -16,11 +16,12 @@ Memory and CPU requirements escalate very quickly
 The input for the scripts is a *.vtk file consisting of both endocardium and epicardium meshes.
 Epicardium vertices should also be assigned to atrium segments (pvs, walls etc.) to allow the calculation of segmented results.
 
-Usage: 
+### Usage: 
     python main.py input_file [--out Outfile] [--res Resolution] [--algorithm] 
 
 main.py is a facade behind which plugins implementing different algorithm are hidden.
-Currently implemented algorithms:
+
+### Currently implemented algorithms:
   - simple (SimpleThickness.py) - based on the principle of closest vertex
   - ray (RayThickness.py) - calculates the thickness of the mesh by raytracing normals from the internal mesh
   - laplace (LaplaceThickness.py) - Voxelizes the mesh with given resolution, solves the Laplace equation, calculates streamlines, and wall thickness.
@@ -31,11 +32,12 @@ Currently implemented algorithms:
     Bear in mind Cupy, Cuda and Graphic Driver have to be in compatible version.
     This one is capable of solving the Laplace equations at a resolution of up to 0.1mm on 16mb PC in some 40-60sec.
 
-Output:
+### Output:
   - Script outputs data in both:
     - .csv format (Calculated thickness per atrium region) and
     - .vtk format (Calculated thickness on a per/point basis) - ready for visualization
-Add.info:
+
+### Add.info:
   - batch.py - does what's on a tin. Finds .vtk files and processes them as a batch.
 
 
